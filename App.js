@@ -36,6 +36,7 @@ const BREAK_SECONDS = 5 * 60;
 const TASKS_STORAGE_KEY = "@daily_tasks";
 const ROUTINES_STORAGE_KEY = "@routines";
 const XP_STORAGE_KEY = "@xp_progress";
+const THEME_STORAGE_KEY = "@app_theme";
 const WEEKDAY_LABELS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 const ROUTINE_ACCENTS = ["#A970F2", "#5B8DEF", "#E07AA5"];
 const FOCUS_XP = 50;
@@ -68,6 +69,52 @@ const LEVEL_TITLES = [
   "Efsane",
 ];
 const XpContext = createContext(null);
+const ThemeContext = createContext(null);
+
+const THEMES = {
+  purple: {
+    id: "purple",
+    name: "Mor",
+    accent: "#8E50D2",
+    accentSoft: "#A970F2",
+    accentMuted: "#68408F",
+    accentGlow: "#A35DF0",
+    accentSurface: "#251831",
+    accentBorder: "#8E50D2",
+    accentChip: "#211C2A",
+    weekActive: "#3A2A55",
+    text: "#D7C7F2",
+    heatmap: ["#1C1822", "#3B2754", "#5A3A86", "#8E50D2", "#C084FC"],
+  },
+  blue: {
+    id: "blue",
+    name: "Mavi",
+    accent: "#2F6FED",
+    accentSoft: "#6BA3FF",
+    accentMuted: "#1E4BB8",
+    accentGlow: "#4D8DFF",
+    accentSurface: "#152238",
+    accentBorder: "#3D7BFF",
+    accentChip: "#1A2A44",
+    weekActive: "#1E3A5F",
+    text: "#C5D8F6",
+    heatmap: ["#1C1822", "#1A3358", "#24508A", "#2F6FED", "#7EB0FF"],
+  },
+  crimson: {
+    id: "crimson",
+    name: "Kırmızı",
+    accent: "#C6283A",
+    accentSoft: "#E05C6A",
+    accentMuted: "#8E1C2A",
+    accentGlow: "#E04555",
+    accentSurface: "#2A1418",
+    accentBorder: "#C6283A",
+    accentChip: "#32181C",
+    weekActive: "#4A1F28",
+    text: "#F0C4C8",
+    heatmap: ["#1C1822", "#4A1C24", "#7A2430", "#C6283A", "#F06B78"],
+  },
+};
 
 const DEFAULT_TASKS = [
   {
@@ -161,12 +208,10 @@ function getLevelInfo(xp) {
   };
 }
 
-function heatmapColor(count) {
-  if (!count) return "#1C1822";
-  if (count === 1) return "#3B2754";
-  if (count === 2) return "#5A3A86";
-  if (count === 3) return "#8E50D2";
-  return "#C084FC";
+function heatmapColor(count, palette) {
+  const colors = palette || THEMES.purple.heatmap;
+  if (!count) return colors[0];
+  return colors[Math.min(count, colors.length - 1)];
 }
 
 function getLastDays(count) {
@@ -194,6 +239,57 @@ function getHeatmapColumns(days) {
 
 function useXp() {
   return useContext(XpContext);
+}
+
+function useTheme() {
+  return useContext(ThemeContext);
+}
+
+function ThemeProvider({ children }) {
+  const [themeId, setThemeIdState] = useState("purple");
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    async function loadTheme() {
+      try {
+        const stored = await AsyncStorage.getItem(THEME_STORAGE_KEY);
+        if (stored && THEMES[stored]) {
+          setThemeIdState(stored);
+        }
+      } catch {
+        setThemeIdState("purple");
+      } finally {
+        setIsReady(true);
+      }
+    }
+
+    loadTheme();
+  }, []);
+
+  useEffect(() => {
+    if (!isReady) return;
+
+    AsyncStorage.setItem(THEME_STORAGE_KEY, themeId).catch(() => {});
+  }, [isReady, themeId]);
+
+  const setThemeId = useCallback((nextId) => {
+    if (!THEMES[nextId]) return;
+    setThemeIdState(nextId);
+  }, []);
+
+  const value = useMemo(
+    () => ({
+      themeId,
+      theme: THEMES[themeId] || THEMES.purple,
+      setThemeId,
+      themes: THEMES,
+    }),
+    [setThemeId, themeId]
+  );
+
+  return (
+    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
+  );
 }
 
 function XpProvider({ children }) {
@@ -324,6 +420,7 @@ function getDefaultRoutines(todayKey) {
 }
 
 function FocusScreen() {
+  const { theme } = useTheme();
   const { grantFocusComplete } = useXp();
   const awardedRef = useRef(false);
   const rainPlayer = useAudioPlayer(RAIN_SOUND);
@@ -421,7 +518,14 @@ function FocusScreen() {
 
       <View style={styles.modeSelector}>
         <TouchableOpacity
-          style={[styles.modeChip, mode === "focus" && styles.activeMode]}
+          style={[
+            styles.modeChip,
+            mode === "focus" && styles.activeMode,
+            mode === "focus" && {
+              backgroundColor: theme.accentChip,
+              borderColor: theme.accentBorder,
+            },
+          ]}
           onPress={() => selectMode("focus")}
           activeOpacity={0.8}
         >
@@ -436,7 +540,14 @@ function FocusScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.modeChip, mode === "break" && styles.activeMode]}
+          style={[
+            styles.modeChip,
+            mode === "break" && styles.activeMode,
+            mode === "break" && {
+              backgroundColor: theme.accentChip,
+              borderColor: theme.accentBorder,
+            },
+          ]}
           onPress={() => selectMode("break")}
           activeOpacity={0.8}
         >
@@ -453,8 +564,10 @@ function FocusScreen() {
 
       <View style={styles.timerSection}>
         <View style={styles.timerGlow}>
-          <View style={styles.timerCircle}>
-            <Text style={styles.timerStatus}>
+          <View
+            style={[styles.timerCircle, { shadowColor: theme.accentGlow }]}
+          >
+            <Text style={[styles.timerStatus, { color: theme.accentSoft }]}>
               {isRunning
                 ? mode === "focus"
                   ? "FOCUSING"
@@ -482,6 +595,10 @@ function FocusScreen() {
             style={[
               styles.soundChip,
               ambient === "rain" && styles.soundChipActive,
+              ambient === "rain" && {
+                backgroundColor: theme.accentSurface,
+                borderColor: theme.accentBorder,
+              },
             ]}
             onPress={() =>
               setAmbient((current) => (current === "rain" ? null : "rain"))
@@ -507,6 +624,10 @@ function FocusScreen() {
             style={[
               styles.soundChip,
               ambient === "bird" && styles.soundChipActive,
+              ambient === "bird" && {
+                backgroundColor: theme.accentSurface,
+                borderColor: theme.accentBorder,
+              },
             ]}
             onPress={() =>
               setAmbient((current) => (current === "bird" ? null : "bird"))
@@ -541,6 +662,10 @@ function FocusScreen() {
                 style={[
                   styles.categoryChip,
                   isActive && styles.categoryChipActive,
+                  isActive && {
+                    backgroundColor: theme.accentChip,
+                    borderColor: theme.accentBorder,
+                  },
                 ]}
                 onPress={() => setFocusCategory(category)}
                 activeOpacity={0.8}
@@ -572,7 +697,9 @@ function FocusScreen() {
         <TouchableOpacity
           style={[
             styles.startButton,
+            { backgroundColor: theme.accent, shadowColor: theme.accentGlow },
             isRunning && styles.startButtonDisabled,
+            isRunning && { backgroundColor: theme.accentMuted },
           ]}
           onPress={() => {
             if (remainingSeconds === 0) {
@@ -600,7 +727,7 @@ function FocusScreen() {
 
       <View style={styles.streakCard}>
         <View style={styles.streakIcon}>
-          <Ionicons name="flame" size={17} color="#A970F2" />
+          <Ionicons name="flame" size={17} color={theme.accentSoft} />
         </View>
 
         <View style={styles.streakContent}>
@@ -617,6 +744,7 @@ function FocusScreen() {
 }
 
 function DailyTasksScreen() {
+  const { theme } = useTheme();
   const { grantActivity } = useXp();
   const [tasks, setTasks] = useState([]);
   const [draft, setDraft] = useState("");
@@ -721,7 +849,7 @@ function DailyTasksScreen() {
             onSubmitEditing={addTask}
           />
           <TouchableOpacity
-            style={styles.addButton}
+            style={[styles.addButton, { backgroundColor: theme.accent }]}
             onPress={addTask}
             activeOpacity={0.8}
           >
@@ -791,6 +919,10 @@ function DailyTasksScreen() {
                 style={[
                   styles.checkbox,
                   task.completed && styles.checkboxChecked,
+                  task.completed && {
+                    backgroundColor: theme.accent,
+                    borderColor: theme.accent,
+                  },
                 ]}
                 onPress={() => toggleTask(task.id)}
                 activeOpacity={0.75}
@@ -834,13 +966,14 @@ function DailyTasksScreen() {
               style={[
                 styles.progressFill,
                 {
-                  borderTopColor: progressPercent > 0 ? "#A970F2" : "#2A2531",
+                  borderTopColor:
+                    progressPercent > 0 ? theme.accentSoft : "#2A2531",
                   borderRightColor:
-                    progressPercent >= 25 ? "#A970F2" : "#2A2531",
+                    progressPercent >= 25 ? theme.accentSoft : "#2A2531",
                   borderBottomColor:
-                    progressPercent >= 50 ? "#A970F2" : "#2A2531",
+                    progressPercent >= 50 ? theme.accentSoft : "#2A2531",
                   borderLeftColor:
-                    progressPercent >= 75 ? "#A970F2" : "#2A2531",
+                    progressPercent >= 75 ? theme.accentSoft : "#2A2531",
                 },
               ]}
             />
@@ -856,6 +989,7 @@ function DailyTasksScreen() {
 }
 
 function RoutinesScreen() {
+  const { theme } = useTheme();
   const today = useMemo(() => {
     const date = new Date();
     date.setHours(0, 0, 0, 0);
@@ -961,7 +1095,7 @@ function RoutinesScreen() {
         </View>
 
         <TouchableOpacity
-          style={styles.addCircleButton}
+          style={[styles.addCircleButton, { backgroundColor: theme.accent }]}
           onPress={() => setIsAdding(true)}
           activeOpacity={0.8}
         >
@@ -977,7 +1111,11 @@ function RoutinesScreen() {
           return (
             <TouchableOpacity
               key={key}
-              style={[styles.weekDay, isSelected && styles.weekDayActive]}
+              style={[
+                styles.weekDay,
+                isSelected && styles.weekDayActive,
+                isSelected && { backgroundColor: theme.weekActive },
+              ]}
               onPress={() => setSelectedKey(key)}
               activeOpacity={0.8}
             >
@@ -985,6 +1123,7 @@ function RoutinesScreen() {
                 style={[
                   styles.weekDayLabel,
                   isSelected && styles.weekDayLabelActive,
+                  isSelected && { color: theme.text },
                 ]}
               >
                 {WEEKDAY_LABELS[date.getDay()]}
@@ -1049,6 +1188,10 @@ function RoutinesScreen() {
                 style={[
                   styles.routineCheck,
                   isDone && styles.routineCheckDone,
+                  isDone && {
+                    backgroundColor: theme.accent,
+                    borderColor: theme.accent,
+                  },
                 ]}
                 onPress={() => toggleRoutine(routine.id)}
                 activeOpacity={0.75}
@@ -1070,7 +1213,9 @@ function RoutinesScreen() {
             {completedCount} of {routines.length} routines completed
           </Text>
         </View>
-        <Text style={styles.rhythmPercent}>{progressPercent}%</Text>
+        <Text style={[styles.rhythmPercent, { color: theme.text }]}>
+          {progressPercent}%
+        </Text>
       </View>
 
       <Modal
@@ -1117,7 +1262,7 @@ function RoutinesScreen() {
                 <Text style={styles.modalCancelText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.modalSave}
+                style={[styles.modalSave, { backgroundColor: theme.accent }]}
                 onPress={addRoutine}
                 activeOpacity={0.8}
               >
@@ -1132,6 +1277,7 @@ function RoutinesScreen() {
 }
 
 function ProfileScreen() {
+  const { theme, themeId, setThemeId, themes } = useTheme();
   const {
     xp,
     activityByDate,
@@ -1143,6 +1289,7 @@ function ProfileScreen() {
     xpForNext,
     progress,
   } = useXp();
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const days = useMemo(() => getLastDays(30), []);
   const columns = useMemo(() => getHeatmapColumns(days), [days]);
 
@@ -1159,18 +1306,24 @@ function ProfileScreen() {
           <Text style={styles.title}>Profile</Text>
         </View>
 
-        <View style={styles.profile}>
-          <Text style={styles.profileText}>JD</Text>
-        </View>
+        <TouchableOpacity
+          style={[styles.settingsButton, { backgroundColor: theme.accent }]}
+          onPress={() => setSettingsOpen(true)}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="settings-outline" size={18} color="#FFFFFF" />
+        </TouchableOpacity>
       </View>
 
       <View style={styles.xpCard}>
         <View style={styles.xpHeader}>
           <View>
-            <Text style={styles.xpLevel}>Lv.{level}</Text>
+            <Text style={[styles.xpLevel, { color: theme.accentSoft }]}>
+              Lv.{level}
+            </Text>
             <Text style={styles.xpTitle}>{title}</Text>
           </View>
-          <Text style={styles.xpTotal}>{xp} XP</Text>
+          <Text style={[styles.xpTotal, { color: theme.text }]}>{xp} XP</Text>
         </View>
 
         <View style={styles.xpBarTrack}>
@@ -1181,6 +1334,7 @@ function ProfileScreen() {
                 width: `${
                   progress === 0 ? 0 : Math.max(progress * 100, 6)
                 }%`,
+                backgroundColor: theme.accent,
               },
             ]}
           />
@@ -1229,7 +1383,7 @@ function ProfileScreen() {
                       key={key}
                       style={[
                         styles.heatmapCell,
-                        { backgroundColor: heatmapColor(count) },
+                        { backgroundColor: heatmapColor(count, theme.heatmap) },
                       ]}
                     />
                   );
@@ -1246,7 +1400,7 @@ function ProfileScreen() {
               key={count}
               style={[
                 styles.heatmapLegendCell,
-                { backgroundColor: heatmapColor(count) },
+                { backgroundColor: heatmapColor(count, theme.heatmap) },
               ]}
             />
           ))}
@@ -1265,7 +1419,7 @@ function ProfileScreen() {
           return (
             <View key={category} style={styles.statsRow}>
               <Text style={styles.statsLabel}>{category}</Text>
-              <Text style={styles.statsValue}>
+              <Text style={[styles.statsValue, { color: theme.accentSoft }]}>
                 {pomodoros} pomodoro · {pomodoros * 25} dk
               </Text>
             </View>
@@ -1273,17 +1427,77 @@ function ProfileScreen() {
         })}
       </View>
       </ScrollView>
+
+      <Modal
+        visible={settingsOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSettingsOpen(false)}
+      >
+        <View style={styles.settingsBackdrop}>
+          <View style={styles.settingsCard}>
+            <Text style={styles.settingsTitle}>Ayarlar</Text>
+            <Text style={styles.settingsSubtitle}>Tema seç</Text>
+
+            {Object.values(themes).map((item) => {
+              const isActive = item.id === themeId;
+
+              return (
+                <TouchableOpacity
+                  key={item.id}
+                  style={[
+                    styles.themeOption,
+                    isActive && {
+                      borderColor: item.accent,
+                      backgroundColor: item.accentSurface,
+                    },
+                  ]}
+                  onPress={() => setThemeId(item.id)}
+                  activeOpacity={0.8}
+                >
+                  <View
+                    style={[
+                      styles.themeSwatch,
+                      { backgroundColor: item.accent },
+                    ]}
+                  />
+                  <Text style={styles.themeOptionText}>{item.name}</Text>
+                  {isActive ? (
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={18}
+                      color={item.accentSoft}
+                    />
+                  ) : (
+                    <View style={styles.themeOptionSpacer} />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+
+            <TouchableOpacity
+              style={[styles.settingsClose, { backgroundColor: theme.accent }]}
+              onPress={() => setSettingsOpen(false)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.settingsCloseText}>Kapat</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
 
 function AppTabs() {
+  const { theme } = useTheme();
+
   return (
     <Tab.Navigator
       initialRouteName="Focus"
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: "#A970F2",
+        tabBarActiveTintColor: theme.accentSoft,
         tabBarInactiveTintColor: "#716B7D",
         tabBarStyle: styles.tabBar,
         tabBarLabelStyle: styles.tabBarLabel,
@@ -1297,7 +1511,12 @@ function AppTabs() {
           };
 
           return (
-            <View style={focused ? styles.activeTabIcon : undefined}>
+            <View
+              style={[
+                focused ? styles.activeTabIcon : undefined,
+                focused && { backgroundColor: theme.accentSurface },
+              ]}
+            >
               <Ionicons name={icons[route.name]} size={20} color={color} />
             </View>
           );
@@ -1315,12 +1534,14 @@ function AppTabs() {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <XpProvider>
-        <StatusBar barStyle="light-content" backgroundColor="#0D0B12" />
-        <NavigationContainer>
-          <AppTabs />
-        </NavigationContainer>
-      </XpProvider>
+      <ThemeProvider>
+        <XpProvider>
+          <StatusBar barStyle="light-content" backgroundColor="#0D0B12" />
+          <NavigationContainer>
+            <AppTabs />
+          </NavigationContainer>
+        </XpProvider>
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }
@@ -2148,6 +2369,79 @@ const styles = StyleSheet.create({
   statsValue: {
     color: "#A970F2",
     fontSize: 12,
+    fontWeight: "700",
+  },
+  settingsButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  settingsBackdrop: {
+    flex: 1,
+    padding: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(5, 4, 8, 0.72)",
+  },
+  settingsCard: {
+    width: "100%",
+    maxWidth: 340,
+    padding: 18,
+    borderRadius: 18,
+    backgroundColor: "#16131B",
+    borderWidth: 1,
+    borderColor: "#2A2531",
+  },
+  settingsTitle: {
+    color: "#F6F2FA",
+    fontSize: 20,
+    fontWeight: "700",
+  },
+  settingsSubtitle: {
+    marginTop: 6,
+    marginBottom: 14,
+    color: "#6F687B",
+    fontSize: 12,
+  },
+  themeOption: {
+    minHeight: 48,
+    marginBottom: 8,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#121017",
+    borderWidth: 1,
+    borderColor: "#2A2531",
+  },
+  themeSwatch: {
+    width: 16,
+    height: 16,
+    marginRight: 10,
+    borderRadius: 8,
+  },
+  themeOptionText: {
+    flex: 1,
+    color: "#EDE7F3",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  themeOptionSpacer: {
+    width: 18,
+    height: 18,
+  },
+  settingsClose: {
+    height: 44,
+    marginTop: 8,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  settingsCloseText: {
+    color: "#FFFFFF",
+    fontSize: 14,
     fontWeight: "700",
   },
 });
