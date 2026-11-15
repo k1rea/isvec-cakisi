@@ -1,174 +1,147 @@
-import { useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, View, Text, TextInput, Pressable } from 'react-native';
+import { StyleSheet, View, Text, Image, ScrollView } from 'react-native';
 
-function yeniGizliSayi() {
-  return Math.floor(Math.random() * 100) + 1;
-}
+// İstatistik kartlarının verisi (Ek görev 4: diziye taşındı)
+const istatistikler = [
+  { id: 1, deger: '1.250', baslik: 'Puan', renk: '#89b4fa' },
+  { id: 2, deger: '48', baslik: 'Galibiyet', renk: '#a6e3a1' },
+  { id: 3, deger: '320', baslik: 'Altın', renk: '#f9e2af' },
+  { id: 4, deger: '12', baslik: 'Rozet', renk: '#f38ba8' },
+];
 
-export default function App() {
-  const [gizli, setGizli] = useState(yeniGizliSayi());
-  const [tahmin, setTahmin] = useState('');
-  const [mesaj, setMesaj] = useState('1 ile 100 arasında bir sayı tuttum. Bil bakalım!');
-  const [mesajTuru, setMesajTuru] = useState('bilgi'); // bilgi | ipucu | hata | kazandi
-  const [deneme, setDeneme] = useState(0);
-  const [bildi, setBildi] = useState(false);
+// Son etkinlikler (Ek görev 2: iki yeni etkinlik eklendi)
+const etkinlikler = [
+  { id: 1, metin: 'Boss savaşını kazandın', zaman: '2 saat önce' },
+  { id: 2, metin: 'Yeni rozet: Hız Ustası', zaman: 'Dün' },
+  { id: 3, metin: '3. seviyeyi bitirdin', zaman: '2 gün önce' },
+  { id: 4, metin: 'Efsanevi kılıç buldun', zaman: '3 gün önce' },
+  { id: 5, metin: 'Loncaya katıldın', zaman: '1 hafta önce' },
+];
 
-  const tahminEt = () => {
-    // Geçersiz giriş kontrolü: boş, sayı değil ya da 1–100 dışı
-    if (tahmin.trim() === '') {
-      setMesaj('Lütfen bir sayı yaz.');
-      setMesajTuru('hata');
-      return;
-    }
-
-    const sayi = Number(tahmin);
-
-    if (isNaN(sayi) || sayi < 1 || sayi > 100) {
-      setMesaj('Geçersiz giriş! 1 ile 100 arasında bir sayı yaz.');
-      setMesajTuru('hata');
-      setTahmin('');
-      return;
-    }
-
-    const yeniDeneme = deneme + 1;
-    setDeneme(yeniDeneme);
-
-    if (sayi < gizli) {
-      setMesaj(`${sayi} → Daha büyük!`);
-      setMesajTuru('ipucu');
-    } else if (sayi > gizli) {
-      setMesaj(`${sayi} → Daha küçük!`);
-      setMesajTuru('ipucu');
-    } else {
-      setMesaj(`Bildin! 🎉 Sayı ${gizli} idi. ${yeniDeneme}. tahminde buldun.`);
-      setMesajTuru('kazandi');
-      setBildi(true);
-    }
-
-    // Her tahminden sonra kutuyu temizle
-    setTahmin('');
-  };
-
-  const yenidenOyna = () => {
-    setGizli(yeniGizliSayi());
-    setTahmin('');
-    setDeneme(0);
-    setBildi(false);
-    setMesaj('Yeni bir sayı tuttum. Bil bakalım!');
-    setMesajTuru('bilgi');
-  };
-
+// Adım 2: İstatistik kartı bileşeni
+function StatKarti({ deger, baslik, renk }) {
   return (
-    <View style={styles.ekran}>
-      <Text style={styles.baslik}>Sayı Tahmin Oyunu</Text>
-      <Text style={styles.sayac}>Tahmin sayısı: {deneme}</Text>
-
-      <TextInput
-        style={styles.kutu}
-        value={tahmin}
-        onChangeText={setTahmin}
-        placeholder="1 - 100"
-        placeholderTextColor="#6c7086"
-        keyboardType="numeric"
-        maxLength={3}
-        editable={!bildi}
-        onSubmitEditing={tahminEt}
-      />
-
-      <Pressable
-        onPress={tahminEt}
-        disabled={bildi}
-        style={({ pressed }) => [
-          styles.buton,
-          pressed && styles.butonBasili,
-          bildi && styles.butonPasif,
-        ]}
-      >
-        <Text style={styles.butonYazi}>Tahmin Et</Text>
-      </Pressable>
-
-      <Text style={[styles.mesaj, styles[mesajTuru]]}>{mesaj}</Text>
-
-      {bildi && (
-        <Pressable
-          onPress={yenidenOyna}
-          style={({ pressed }) => [
-            styles.buton,
-            styles.yenidenButon,
-            pressed && styles.butonBasili,
-          ]}
-        >
-          <Text style={styles.butonYazi}>Yeniden Oyna</Text>
-        </Pressable>
-      )}
-
-      <StatusBar style="light" />
+    <View style={[styles.kart, { borderLeftColor: renk }]}>
+      <Text style={styles.kartDeger}>{deger}</Text>
+      <Text style={styles.kartBaslik}>{baslik}</Text>
     </View>
   );
 }
 
+// Adım 3 (Ek görev 3): İlerleme çubuğu bileşeni
+function IlerlemeCubugu({ seviye, yuzde }) {
+  return (
+    <View style={styles.bolum}>
+      <View style={styles.seviyeSatir}>
+        <Text style={styles.bolumBaslik}>Seviye {seviye}</Text>
+        <Text style={styles.yuzde}>%{yuzde}</Text>
+      </View>
+      <View style={styles.cubukDis}>
+        <View style={[styles.cubukIc, { width: `${yuzde}%` }]} />
+      </View>
+    </View>
+  );
+}
+
+export default function App() {
+  return (
+    <ScrollView
+      style={styles.ekran}
+      contentContainerStyle={styles.icerik}
+    >
+      {/* 1. Üst bar */}
+      <View style={styles.ustBar}>
+        <Image
+          source={require('./assets/karakter.png')}
+          style={styles.avatar}
+        />
+        <View>
+          <Text style={styles.selam}>Merhaba, Kaan!</Text>
+          <Text style={styles.altYazi}>Bugün de oynayalım mı?</Text>
+        </View>
+      </View>
+
+      {/* 2. İstatistik kartları (2x2) */}
+      <View style={styles.kartlar}>
+        {istatistikler.map((i) => (
+          <StatKarti key={i.id} deger={i.deger} baslik={i.baslik} renk={i.renk} />
+        ))}
+      </View>
+
+      {/* 3. İlerleme çubuğu */}
+      <IlerlemeCubugu seviye={7} yuzde={65} />
+
+      {/* 4. Son etkinlikler */}
+      <View style={styles.bolum}>
+        <Text style={styles.bolumBaslik}>Son Etkinlikler</Text>
+        {etkinlikler.map((e) => (
+          <View key={e.id} style={styles.etkinlik}>
+            <Text style={styles.etkinlikMetin}>• {e.metin}</Text>
+            <Text style={styles.zaman}>{e.zaman}</Text>
+          </View>
+        ))}
+      </View>
+
+      <StatusBar style="light" />
+    </ScrollView>
+  );
+}
+
 const styles = StyleSheet.create({
-  ekran: {
-    flex: 1,
-    backgroundColor: '#1e1e2e',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
+  ekran: { flex: 1, backgroundColor: '#1e1e2e' },
+  icerik: { padding: 20, paddingTop: 60, paddingBottom: 40 },
+
+  ustBar: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
+  avatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    marginRight: 12,
+    borderWidth: 2,
+    borderColor: '#f9e2af',
   },
-  baslik: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#f9e2af',
+  selam: { fontSize: 22, fontWeight: 'bold', color: '#cdd6f4' },
+  altYazi: { fontSize: 14, color: '#a6adc8' },
+
+  kartlar: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  kart: {
+    width: '48%',
+    backgroundColor: '#313244',
+    padding: 16,
+    borderRadius: 12,
+    borderLeftWidth: 5,
+    marginBottom: 12,
+  },
+  kartDeger: { fontSize: 24, fontWeight: 'bold', color: '#cdd6f4' },
+  kartBaslik: { fontSize: 14, color: '#a6adc8', marginTop: 4 },
+
+  bolum: {
+    backgroundColor: '#313244',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  seviyeSatir: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginBottom: 8,
   },
-  sayac: {
-    fontSize: 16,
-    color: '#a6adc8',
-    marginBottom: 24,
+  bolumBaslik: { fontSize: 16, fontWeight: 'bold', color: '#cdd6f4' },
+  yuzde: { fontSize: 16, fontWeight: 'bold', color: '#89b4fa' },
+  cubukDis: { height: 12, backgroundColor: '#45475a', borderRadius: 6 },
+  cubukIc: { height: 12, backgroundColor: '#89b4fa', borderRadius: 6 },
+
+  etkinlik: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#45475a',
   },
-  kutu: {
-    width: '60%',
-    backgroundColor: '#313244',
-    color: '#cdd6f4',
-    fontSize: 24,
-    textAlign: 'center',
-    paddingVertical: 12,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: '#45475a',
-    marginBottom: 16,
-  },
-  buton: {
-    width: '60%',
-    backgroundColor: '#89b4fa',
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  butonBasili: {
-    opacity: 0.7,
-    transform: [{ scale: 0.97 }],
-  },
-  butonPasif: {
-    backgroundColor: '#45475a',
-  },
-  yenidenButon: {
-    backgroundColor: '#a6e3a1',
-    marginTop: 16,
-  },
-  butonYazi: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1e1e2e',
-  },
-  mesaj: {
-    fontSize: 18,
-    textAlign: 'center',
-    marginTop: 24,
-  },
-  bilgi: { color: '#cdd6f4' },
-  ipucu: { color: '#f9e2af' },
-  hata: { color: '#f38ba8' },
-  kazandi: { color: '#a6e3a1', fontWeight: 'bold' },
+  etkinlikMetin: { color: '#cdd6f4' },
+  zaman: { fontSize: 12, color: '#a6adc8' },
 });
