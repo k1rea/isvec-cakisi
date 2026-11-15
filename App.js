@@ -1,38 +1,45 @@
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View } from 'react-native';
 
-const oyuncular = [
-  { isim: 'Ayşe', puan: 40 },
-  { isim: 'Veli', puan: 15 },
-  { isim: 'Zeynep', puan: 70 },
-  { isim: 'Mehmet', puan: 55 },
-];
+// Oyuncu kartı: isim, puan ve seviye bilgisini props ile alır
+function OyuncuKarti({ isim, puan, seviye }) {
+  return (
+    <View style={styles.kart}>
+      <View style={styles.kartUst}>
+        <Text style={styles.isim}>{isim}</Text>
+        <Text style={styles.seviye}>Seviye {seviye}</Text>
+      </View>
+      <Text style={styles.detay}>Puan: {puan}</Text>
+    </View>
+  );
+}
+
+// Eşya kartı: eşyanın adını, türünü ve değerini props ile alır
+function EsyaKarti({ ad, tur, deger }) {
+  return (
+    <View style={[styles.kart, styles.esyaKart]}>
+      <View style={styles.kartUst}>
+        <Text style={styles.isim}>{ad}</Text>
+        <Text style={styles.deger}>{deger} altın</Text>
+      </View>
+      <Text style={styles.detay}>Tür: {tur}</Text>
+    </View>
+  );
+}
 
 export default function App() {
-  const isimler = oyuncular.map((o) => o.isim);
-  const yuksekPuanlilar = oyuncular.filter((o) => o.puan > 30);
-
-  const satirlar = [];
-  oyuncular.forEach(({ isim, puan }) => {
-    satirlar.push(`${isim}: ${puan} puan`);
-  });
-
   return (
-    <View style={styles.container}>
+    <View style={styles.ekran}>
       <Text style={styles.baslik}>Skor Tablosu</Text>
+      <OyuncuKarti isim="Ayşe" puan={40} seviye={3} />
+      <OyuncuKarti isim="Veli" puan={15} seviye={1} />
+      <OyuncuKarti isim="Zeynep" puan={70} seviye={5} />
 
-      <Text style={styles.bolum}>Tüm oyuncular (forEach)</Text>
-      {satirlar.map((satir) => (
-        <Text key={satir} style={styles.satir}>{satir}</Text>
-      ))}
-
-      <Text style={styles.bolum}>30 puan üstü (filter + map)</Text>
-      {yuksekPuanlilar.map(({ isim, puan }) => (
-        <Text key={isim} style={styles.satir}>{`${isim} — ${puan}`}</Text>
-      ))}
-
-      <Text style={styles.bolum}>İsimler (map)</Text>
-      <Text style={styles.satir}>{isimler.join(', ')}</Text>
+      <Text style={styles.baslik}>Envanter</Text>
+      <EsyaKarti ad="Kılıç" tur="Silah" deger={150} />
+      <EsyaKarti ad="Kalkan" tur="Zırh" deger={90} />
+      <EsyaKarti ad="Asa" tur="Büyü" deger={300} />
+      <EsyaKarti ad="İksir" tur="Tüketim" deger={20} />
 
       <StatusBar style="light" />
     </View>
@@ -40,28 +47,53 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  ekran: {
     flex: 1,
     backgroundColor: '#1e1e2e',
-    padding: 32,
-    justifyContent: 'center',
+    padding: 24,
+    paddingTop: 60,
   },
   baslik: {
-    fontSize: 30,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#f9e2af',
-    marginBottom: 16,
+    marginTop: 8,
+    marginBottom: 12,
   },
-  bolum: {
-    fontSize: 16,
+  kart: {
+    backgroundColor: '#313244',
+    padding: 14,
+    borderRadius: 10,
+    marginBottom: 10,
+    borderLeftWidth: 4,
+    borderLeftColor: '#89b4fa',
+  },
+  esyaKart: {
+    borderLeftColor: '#a6e3a1',
+  },
+  kartUst: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  isim: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#cdd6f4',
+  },
+  seviye: {
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#89b4fa',
-    marginTop: 16,
-    marginBottom: 6,
   },
-  satir: {
-    fontSize: 18,
-    color: '#cdd6f4',
-    marginBottom: 4,
+  deger: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#f9e2af',
+  },
+  detay: {
+    fontSize: 14,
+    color: '#a6adc8',
+    marginTop: 4,
   },
 });
