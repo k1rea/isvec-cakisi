@@ -1,99 +1,103 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View, Text, Image, ScrollView } from 'react-native';
 
-// Oyuncu kartı: isim, puan ve seviye bilgisini props ile alır
-function OyuncuKarti({ isim, puan, seviye }) {
+// İstatistik kutusu: değer ve ad bilgisini props ile alır
+function StatKutusu({ deger, ad }) {
   return (
-    <View style={styles.kart}>
-      <View style={styles.kartUst}>
-        <Text style={styles.isim}>{isim}</Text>
-        <Text style={styles.seviye}>Seviye {seviye}</Text>
-      </View>
-      <Text style={styles.detay}>Puan: {puan}</Text>
-    </View>
-  );
-}
-
-// Eşya kartı: eşyanın adını, türünü ve değerini props ile alır
-function EsyaKarti({ ad, tur, deger }) {
-  return (
-    <View style={[styles.kart, styles.esyaKart]}>
-      <View style={styles.kartUst}>
-        <Text style={styles.isim}>{ad}</Text>
-        <Text style={styles.deger}>{deger} altın</Text>
-      </View>
-      <Text style={styles.detay}>Tür: {tur}</Text>
+    <View style={styles.kutu}>
+      <Text style={styles.deger}>{deger}</Text>
+      <Text style={styles.kutuAd}>{ad}</Text>
     </View>
   );
 }
 
 export default function App() {
   return (
-    <View style={styles.ekran}>
-      <Text style={styles.baslik}>Skor Tablosu</Text>
-      <OyuncuKarti isim="Ayşe" puan={40} seviye={3} />
-      <OyuncuKarti isim="Veli" puan={15} seviye={1} />
-      <OyuncuKarti isim="Zeynep" puan={70} seviye={5} />
+    <ScrollView
+      style={styles.arkaPlan}
+      contentContainerStyle={styles.ekran}
+    >
+      {/* Üst kısım: görsel ve isim */}
+      <Image
+        source={require('./assets/karakter.png')}
+        style={styles.avatar}
+      />
+      <Text style={styles.isim}>Kahraman Kaan</Text>
+      <Text style={styles.sinif}>Seviye 7 · Savaşçı</Text>
 
-      <Text style={styles.baslik}>Envanter</Text>
-      <EsyaKarti ad="Kılıç" tur="Silah" deger={150} />
-      <EsyaKarti ad="Kalkan" tur="Zırh" deger={90} />
-      <EsyaKarti ad="Asa" tur="Büyü" deger={300} />
-      <EsyaKarti ad="İksir" tur="Tüketim" deger={20} />
+      {/* Ortadaki dört kutu: yan yana */}
+      <View style={styles.satir}>
+        <StatKutusu deger={120} ad="Can" />
+        <StatKutusu deger={45} ad="Güç" />
+        <StatKutusu deger={30} ad="Hız" />
+        <StatKutusu deger={60} ad="Zeka" />
+      </View>
+
+      {/* Alt kısım: açıklama */}
+      <Text style={styles.aciklama}>
+        Kaan, kuzey dağlarından gelen cesur bir savaşçıdır.
+      </Text>
 
       <StatusBar style="light" />
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  ekran: {
+  arkaPlan: {
     flex: 1,
     backgroundColor: '#1e1e2e',
-    padding: 24,
-    paddingTop: 60,
   },
-  baslik: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#f9e2af',
-    marginTop: 8,
-    marginBottom: 12,
-  },
-  kart: {
-    backgroundColor: '#313244',
-    padding: 14,
-    borderRadius: 10,
-    marginBottom: 10,
-    borderLeftWidth: 4,
-    borderLeftColor: '#89b4fa',
-  },
-  esyaKart: {
-    borderLeftColor: '#a6e3a1',
-  },
-  kartUst: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  ekran: {
     alignItems: 'center',
+    padding: 24,
+    paddingTop: 80,
+  },
+  avatar: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    marginBottom: 12,
+    borderWidth: 3,
+    borderColor: '#f9e2af',
   },
   isim: {
-    fontSize: 18,
+    fontSize: 26,
     fontWeight: 'bold',
     color: '#cdd6f4',
   },
-  seviye: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#89b4fa',
+  sinif: {
+    fontSize: 16,
+    color: '#a6adc8',
+    marginBottom: 24,
+  },
+  satir: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  kutu: {
+    flex: 1,
+    alignItems: 'center',
+    backgroundColor: '#313244',
+    paddingVertical: 16,
+    marginHorizontal: 4,
+    borderRadius: 10,
   },
   deger: {
-    fontSize: 14,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#f9e2af',
   },
-  detay: {
-    fontSize: 14,
+  kutuAd: {
+    fontSize: 13,
     color: '#a6adc8',
-    marginTop: 4,
+    marginTop: 2,
+  },
+  aciklama: {
+    marginTop: 24,
+    fontSize: 16,
+    color: '#cdd6f4',
+    textAlign: 'center',
   },
 });
